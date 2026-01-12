@@ -2,7 +2,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Review, AnalysisResult } from "../types.ts";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+
 
 const cleanJsonResponse = (text: string | undefined) => {
   if (!text) return "";
