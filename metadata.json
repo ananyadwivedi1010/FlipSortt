@@ -1,0 +1,7 @@
+{
+  "name": "FlipIntegrity AI - TrustGuard for Flipkart",
+  "description": "An AI-powered platform for detecting fake reviews and counterfeit products, specifically designed for the Flipkart ecosystem.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
