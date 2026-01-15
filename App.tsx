@@ -37,8 +37,24 @@ const App: React.FC = () => {
       setLiveAnalysis({ ...result.analysis, groundingSources: result.groundingSources });
       setView('Analysis');
     } catch (error) {
-      console.error(error);
-      alert("Search Grounding scan encountered a temporary block. Loading the high-fidelity demo for Ananya.");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Analysis Error:", errorMessage);
+      
+      // Show specific error message
+      let userMessage = "Analysis failed. Loading demo data.";
+      if (errorMessage.includes("quota")) {
+        userMessage = "API quota exceeded. Your free tier usage limit has been reached. Please upgrade your Gemini API plan or wait for the quota to reset (usually daily). Loading demo data.";
+      } else if (errorMessage.includes("API key")) {
+        userMessage = "API configuration error. Please check your .env file. Loading demo data.";
+      } else if (errorMessage.includes("API")) {
+        userMessage = "API service error. Loading demo data.";
+      } else if (errorMessage.includes("parse")) {
+        userMessage = "Invalid response format. Loading demo data.";
+      } else if (errorMessage.includes("Network")) {
+        userMessage = "Network error. Please check your connection. Loading demo data.";
+      }
+      
+      alert(userMessage);
       setLiveProduct(MOCK_PRODUCTS[0]);
       setLiveAnalysis(MOCK_ANALYSIS);
       setView('Analysis');
