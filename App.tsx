@@ -20,6 +20,14 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       const result = await analyzeFlipkartUrl(targetUrl);
+      
+      // Validate image URL - only accept Flipkart images
+      let validImage = result.productInfo.image || MOCK_PRODUCTS[0].image;
+      if (validImage && !validImage.includes('flipkart') && !validImage.includes('cdn') && validImage.includes('media-amazon')) {
+        console.warn('⚠️ Rejecting non-Flipkart image:', validImage);
+        validImage = MOCK_PRODUCTS[0].image; // Use mock image instead
+      }
+      
       const productData: Product = {
         id: 'live-' + Math.random(),
         name: result.productInfo.name || 'Flipkart Product',
@@ -27,7 +35,7 @@ const App: React.FC = () => {
         originalPrice: (result.productInfo.price || 0) * 1.3,
         rating: 4.5,
         reviewCount: 12000,
-        image: result.productInfo.image || MOCK_PRODUCTS[0].image,
+        image: validImage,
         category: 'Marketplace Scan',
         seller: 'Verified AI Seller',
         description: result.productInfo.description || '',

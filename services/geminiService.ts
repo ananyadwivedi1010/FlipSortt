@@ -1,13 +1,16 @@
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { Review, AnalysisResult } from "../types.ts";
 
 const getAI = () => {
-  const apiKey = (process.env.VITE_GEMINI_API_KEY || process.env.API_KEY) as string;
+  // Access Vite env variables
+  const env = import.meta.env as Record<string, string>;
+  const apiKey = env.VITE_GROQ_API_KEY || env.GROQ_API_KEY;
+  
   if (!apiKey) {
-    throw new Error("VITE_GEMINI_API_KEY is not configured. Please add it to your .env file.");
+    throw new Error("VITE_GROQ_API_KEY is not configured. Please add it to your .env file.");
   }
-  return new GoogleGenerativeAI(apiKey);
+  return new Groq({ apiKey, dangerouslyAllowBrowser: true });
 };
 
 const cleanJsonResponse = (text: string | undefined) => {
@@ -16,15 +19,19 @@ const cleanJsonResponse = (text: string | undefined) => {
   return text.replace(/```json\n?|```/g, '').trim();
 };
 
-// Fix: Added analyzeProductReviews function which was missing but imported in ReviewAnalysis.tsx
 /**
- * Analyzes a list of reviews for a specific product using Gemini.
+ * Analyzes a list of reviews for a specific product using Groq.
  */
 export const analyzeProductReviews = async (reviews: Review[], productName: string): Promise<AnalysisResult> => {
-  const ai = getAI();
+  const groq = getAI();
   
-  const response = await ai.getGenerativeModel({ model: 'gemini-pro' }).generateContent(
-    `Analyze the following reviews for the product "${productName}" to detect bot activity, sentiment, and product quality.
+  try {
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile", // Latest available model
+      messages: [
+        {
+          role: "user",
+          content: `Analyze the following reviews for the product "${productName}" to detect bot activity, sentiment, and product quality.
     
     Reviews:
     ${JSON.stringify(reviews.map(r => ({ user: r.user, comment: r.comment, rating: r.rating })))}
@@ -38,7 +45,7 @@ export const analyzeProductReviews = async (reviews: Review[], productName: stri
     6. Estimate authenticity percentages.
     7. Provide 3-4 LDA topics and a 5-day seasonal score trend.
     
-    Return a JSON object with this structure:
+    Return ONLY a JSON object with this structure:
     {
       "summary": "...",
       "sentiment": {"positive": 0, "neutral": 0, "negative": 0},
@@ -50,10 +57,13 @@ export const analyzeProductReviews = async (reviews: Review[], productName: stri
       "isCounterfeit": false,
       "fakeReviews": []
     }`
-  );
+        }
+      ],
+      temperature: 0.3, // Lower temperature for more consistent JSON
+      max_tokens: 1024
+    });
 
-  try {
-    const text = response.response.text();
+    const text = response.choices[0]?.message?.content;
     if (!text) throw new Error("Empty AI response");
     return JSON.parse(cleanJsonResponse(text));
   } catch (e) {
@@ -63,11 +73,11 @@ export const analyzeProductReviews = async (reviews: Review[], productName: stri
 };
 
 /**
- * Analyzes Flipkart product URL using Gemini with search grounding.
+ * Analyzes Flipkart product URL using Groq.
  * Fetches product info and analyzes for counterfeit indicators.
  */
 export const analyzeFlipkartUrl = async (url: string): Promise<any> => {
-  const ai = getAI();
+  const groq = getAI();
   
   if (!url || typeof url !== 'string') {
     throw new Error("Invalid URL provided");
@@ -80,18 +90,22 @@ export const analyzeFlipkartUrl = async (url: string): Promise<any> => {
     try {
       console.log(`Analyzing Flipkart URL (Attempt ${attempt}/${maxRetries}): ${url}`);
       
-      // Use gemini-pro which is stable and available in v1beta API
-      const response = await ai.getGenerativeModel({ model: 'gemini-pro' }).generateContent(
-        `You are a product integrity analyst. Analyze this Flipkart product URL and provide detailed analysis:
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "user",
+            content: `You are a product integrity analyst. Analyze this Flipkart product URL and provide detailed analysis.
+THIS IS A FLIPKART PRODUCT - ONLY use Flipkart image URLs if available (cdn.flipkart.com or flipkart domain), otherwise leave image empty.
 
 ${url}
 
-Please provide analysis in the following JSON format:
+Please provide analysis in the following JSON format (ONLY JSON, no markdown):
 {
   "productInfo": {
     "name": "Product name",
     "price": 999,
-    "image": "image url or empty string",
+    "image": "flipkart image url or empty string",
     "description": "Product description"
   },
   "analysis": {
@@ -124,9 +138,13 @@ Please provide analysis in the following JSON format:
     }
   }
 }`
-      );
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 1536
+      });
 
-      const responseText = response.response.text();
+      const responseText = response.choices[0]?.message?.content;
       if (!responseText) {
         throw new Error("Empty response from API");
       }
@@ -134,7 +152,17 @@ Please provide analysis in the following JSON format:
       const cleanedJson = cleanJsonResponse(responseText);
       const rawJson = JSON.parse(cleanedJson);
       
-      // Extract grounding sources if available (simplified for new API)
+      // Filter out non-Flipkart image URLs (reject Amazon, etc.)
+      if (rawJson.productInfo && rawJson.productInfo.image) {
+        const imageUrl = rawJson.productInfo.image;
+        // Only allow Flipkart, cdn.flipkart.com, or empty strings
+        if (imageUrl && !imageUrl.includes('flipkart') && !imageUrl.includes('cdn')) {
+          console.warn(`⚠️ Rejected non-Flipkart image URL: ${imageUrl}`);
+          rawJson.productInfo.image = ''; // Clear the invalid image URL
+        }
+      }
+      
+      // Extract grounding sources if available (simplified for Groq)
       const sources: any[] = [];
 
       console.log(`✓ Successfully analyzed URL on attempt ${attempt}`);
@@ -159,7 +187,7 @@ Please provide analysis in the following JSON format:
       
       // Don't retry quota errors
       if (isQuotaError) {
-        throw new Error("API quota exceeded. Please upgrade your Gemini API plan at https://ai.google.dev/pricing or wait for quota reset (usually daily).");
+        throw new Error("API quota exceeded. Groq has generous free tier - try again in a moment or check your usage at https://console.groq.com/");
       }
       
       // Retry network and transient errors with exponential backoff
@@ -187,19 +215,32 @@ Please provide analysis in the following JSON format:
 };
 
 export const chatWithAssistant = async (history: { role: 'user' | 'assistant', content: string }[], userMessage: string) => {
-  const ai = getAI();
-  const model = ai.getGenerativeModel({
-    model: 'gemini-pro',
-    systemInstruction: 'You are FlipIntegrity AI. You are helping Ananya detect fraudulent listings and fake reviews on Flipkart. Be professional, analytical, and alert her to specific counterfeit risks.'
+  const groq = getAI();
+  
+  const messages = [
+    // Add system instruction as first message
+    {
+      role: 'user' as const,
+      content: "You are FlipIntegrity AI. You are helping Ananya detect fraudulent listings and fake reviews on Flipkart. Be professional, analytical, and alert her to specific counterfeit risks."
+    },
+    // Add chat history
+    ...history.map((msg) => ({
+      role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
+      content: msg.content
+    })),
+    // Add the new user message
+    {
+      role: 'user' as const,
+      content: userMessage
+    }
+  ];
+  
+  const response = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: messages,
+    temperature: 0.7,
+    max_tokens: 1024
   });
   
-  const chat = model.startChat({
-    history: history.map((msg) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }))
-  });
-  
-  const response = await chat.sendMessage(userMessage);
-  return response.response.text();
+  return response.choices[0]?.message?.content || "No response generated";
 };
