@@ -17,7 +17,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentView, setView, isLoggedIn, onLog
         <div className="flex items-center space-x-12">
           <div className="flex items-center cursor-pointer group" onClick={() => setView('Home')}>
             <h1 className="text-2xl font-black tracking-tighter italic group-hover:scale-105 transition duration-300">
-              <span className="text-[#2874f0]">Flip</span>Integrity
+              <span className="text-[#2874f0]">Flip</span>Sort
             </h1>
           </div>
 

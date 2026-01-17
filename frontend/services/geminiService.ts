@@ -244,7 +244,7 @@ Please provide detailed analysis in the following JSON format (ONLY JSON, no mar
 export const chatWithAssistant = async (history: { role: 'user' | 'assistant', content: string }[], userMessage: string, context?: any) => {
   const groq = getAI();
 
-  const systemMsg = "You are FlipIntegrity AI. You are helping Ananya detect fraudulent listings and fake reviews on Flipkart. Be professional, analytical, and alert her to specific counterfeit risks.";
+  const systemMsg = "You are FlipSort AI. You are helping Ananya detect fraudulent listings and fake reviews on Flipkart. Be professional, analytical, and alert her to specific counterfeit risks.";
 
   const contextMsg = context ? `
 Current Product Context (LIVE DATA):

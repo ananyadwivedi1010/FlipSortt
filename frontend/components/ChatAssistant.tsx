@@ -11,7 +11,7 @@ interface Props {
 const ChatAssistant: React.FC<Props> = ({ product }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([
-    { role: 'assistant', content: 'Hello! I am your FlipIntegrity AI assistant. How can I help you verify products or detect fake reviews today?' }
+    { role: 'assistant', content: 'Hello! I am your FlipSort AI assistant. How can I help you verify products or detect fake reviews today?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,7 +61,7 @@ const ChatAssistant: React.FC<Props> = ({ product }) => {
                 <svg className="w-5 h-5 text-[#2874f0]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" /></svg>
               </div>
               <div>
-                <h3 className="text-sm font-bold">FlipIntegrity AI</h3>
+                <h3 className="text-sm font-bold">FlipSort</h3>
                 <p className="text-[10px] text-blue-100 flex items-center">
                   <span className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1 animate-pulse"></span> Online Now
                 </p>

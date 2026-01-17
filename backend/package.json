@@ -2,7 +2,7 @@
     "name": "flipsort-backend",
     "version": "1.0.0",
     "type": "module",
-    "description": "Backend scraper for Flipsort",
+    "description": "Backend scraper for FlipSort",
     "main": "index.js",
     "scripts": {
         "start": "node index.js"

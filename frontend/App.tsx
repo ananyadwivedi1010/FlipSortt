@@ -73,10 +73,10 @@ const App: React.FC = () => {
       <div className="container mx-auto px-6 pt-32 pb-20 flex flex-col md:flex-row items-center justify-between z-10">
         <div className="md:w-1/2 space-y-12 animate-fadeIn">
           <div className="space-y-4">
-            <p className="text-[#2874f0] font-black tracking-[0.4em] uppercase text-sm mb-4">Integrity Enforcement Engine</p>
+            <p className="text-[#2874f0] font-black tracking-[0.4em] uppercase text-sm mb-4">FlipSort Engine</p>
             <h1 className="text-8xl font-black leading-[0.9] tracking-tighter">
               Welcome, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Ananya</span><br />
-              <span className="text-3xl font-bold opacity-60 mt-8 block leading-tight">Scale your brand protection with FlipIntegrity AI</span>
+              <span className="text-3xl font-bold opacity-60 mt-8 block leading-tight">Scale your brand protection with FlipSort</span>
             </h1>
           </div>
           <div className="flex items-center space-x-10">
@@ -84,7 +84,7 @@ const App: React.FC = () => {
               <svg className="w-16 h-16 text-[#2874f0]" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13.536 14.95a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM16.243 16.243a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 011.414-1.414l.707.707z" /></svg>
             </div>
             <div>
-              <h2 className="text-4xl font-black uppercase tracking-[0.2em] italic text-[#2874f0] leading-none mb-1">FlipIntegrity AI</h2>
+              <h2 className="text-4xl font-black uppercase tracking-[0.2em] italic text-[#2874f0] leading-none mb-1">FlipSort</h2>
               <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em]">DeBERTa v3 Large + YOLO Active</p>
             </div>
           </div>
@@ -95,7 +95,7 @@ const App: React.FC = () => {
         <div className="md:w-1/2 flex justify-center perspective-2000">
           <div className="w-[360px] h-[680px] bg-white rounded-[5rem] border-[18px] border-gray-900 shadow-2xl relative overflow-hidden transform rotate-2 hover:rotate-0 transition-all duration-1000 group">
             <div className="p-10 pt-20 h-full bg-gray-50 flex flex-col items-center">
-              <div className="w-24 h-24 bg-[#2874f0] rounded-[2.5rem] flex items-center justify-center text-white font-black text-5xl mb-16 shadow-2xl">FI</div>
+              <div className="w-24 h-24 bg-[#2874f0] rounded-[2.5rem] flex items-center justify-center text-white font-black text-5xl mb-16 shadow-2xl">FS</div>
               <div className="w-full space-y-6 px-6 opacity-30">
                 <div className="h-2.5 w-full bg-gray-800 rounded-full"></div>
                 <div className="h-2.5 w-3/4 bg-gray-800 rounded-full"></div>

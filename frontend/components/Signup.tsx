@@ -29,7 +29,7 @@ const Signup: React.FC<SignupProps> = ({ setView, setIsLoggedIn }) => {
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 to-[#2874f0]"></div>
                 <div className="mb-8 text-center">
                     <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">Get Started</h2>
-                    <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">Join FlipIntegrity</p>
+                    <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">Join FlipSort</p>
                 </div>
 
                 <form onSubmit={handleSignup} className="space-y-6">
