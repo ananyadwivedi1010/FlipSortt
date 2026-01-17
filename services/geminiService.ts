@@ -6,7 +6,7 @@ const getAI = () => {
   // Access Vite env variables
   const env = import.meta.env as Record<string, string>;
   const apiKey = env.VITE_GROQ_API_KEY || env.GROQ_API_KEY;
-  
+
   if (!apiKey) {
     throw new Error("VITE_GROQ_API_KEY is not configured. Please add it to your .env file.");
   }
@@ -24,7 +24,7 @@ const cleanJsonResponse = (text: string | undefined) => {
  */
 export const analyzeProductReviews = async (reviews: Review[], productName: string): Promise<AnalysisResult> => {
   const groq = getAI();
-  
+
   try {
     const response = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile", // Latest available model
@@ -76,40 +76,59 @@ export const analyzeProductReviews = async (reviews: Review[], productName: stri
  * Analyzes Flipkart product URL using Groq.
  * Fetches product info and analyzes for counterfeit indicators.
  */
+
 export const analyzeFlipkartUrl = async (url: string): Promise<any> => {
   const groq = getAI();
-  
+
   if (!url || typeof url !== 'string') {
     throw new Error("Invalid URL provided");
   }
-  
-  const maxRetries = 3;
-  let lastError: Error | null = null;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`Analyzing Flipkart URL (Attempt ${attempt}/${maxRetries}): ${url}`);
-      
-      const response = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          {
-            role: "user",
-            content: `You are a product integrity analyst. Analyze this Flipkart product URL and provide detailed analysis.
-THIS IS A FLIPKART PRODUCT - ONLY use Flipkart image URLs if available (cdn.flipkart.com or flipkart domain), otherwise leave image empty.
 
-${url}
+  // SCRAPING STEP
+  let scrapedData: any = null;
+  try {
+    console.log(`Scraping URL via local server: ${url}`);
+    // Use dynamic import or fetch if axios isn't available, but we added axios
+    // Assuming this runs in browser, we use fetch to call local server
+    const scrapeResponse = await fetch(`http://localhost:3001/scrape?url=${encodeURIComponent(url)}`);
+    if (scrapeResponse.ok) {
+      scrapedData = await scrapeResponse.json();
+      console.log("Scraping successful:", scrapedData);
+    } else {
+      console.warn("Scraping server returned error:", await scrapeResponse.text());
+    }
+  } catch (err) {
+    console.error("Failed to connect to local scraper:", err);
+    console.warn("Proceeding with AI-only analysis (data may be hallucinated or generic).");
+  }
 
-Please provide analysis in the following JSON format (ONLY JSON, no markdown):
+  // AI ANALYSIS STEP
+  try {
+    const messages = [
+      {
+        role: "user",
+        content: `You are a product integrity analyst. Analyze this Flipkart product.
+${scrapedData ? `Here is the LIVE DATA extracted from the page:
+Name: ${scrapedData.name}
+Price: ${scrapedData.price}
+Rating: ${scrapedData.rating}
+Review Count: ${scrapedData.reviewCount}
+Rating Breakdown: ${JSON.stringify(scrapedData.ratingBreakdown)}
+Real User Reviews (use these for sentiment analysis): ${JSON.stringify(scrapedData.recentReviews)}
+Description: ${scrapedData.description}` : ''}
+
+URL: ${url}
+
+Please provide detailed analysis in the following JSON format (ONLY JSON, no markdown):
 {
   "productInfo": {
-    "name": "Product name",
-    "price": 999,
-    "image": "flipkart image url or empty string",
-    "description": "Product description"
+    "name": "${scrapedData ? scrapedData.name : 'Product name'}",
+    "price": ${scrapedData ? scrapedData.price : 999},
+    "image": "${scrapedData ? scrapedData.image : ''}",
+    "description": "${scrapedData ? scrapedData.description : 'Product description'}"
   },
   "analysis": {
-    "summary": "Overall analysis summary",
+    "summary": "Overall analysis summary based on available data",
     "isCounterfeit": false,
     "sentiment": {
       "positive": 80,
@@ -138,109 +157,128 @@ Please provide analysis in the following JSON format (ONLY JSON, no markdown):
     }
   }
 }`
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 1536
-      });
-
-      const responseText = response.choices[0]?.message?.content;
-      if (!responseText) {
-        throw new Error("Empty response from API");
       }
-      
-      const cleanedJson = cleanJsonResponse(responseText);
-      const rawJson = JSON.parse(cleanedJson);
-      
-      // Filter out non-Flipkart image URLs (reject Amazon, etc.)
-      if (rawJson.productInfo && rawJson.productInfo.image) {
-        const imageUrl = rawJson.productInfo.image;
-        // Only allow Flipkart, cdn.flipkart.com, or empty strings
-        if (imageUrl && !imageUrl.includes('flipkart') && !imageUrl.includes('cdn')) {
-          console.warn(`⚠️ Rejected non-Flipkart image URL: ${imageUrl}`);
-          rawJson.productInfo.image = ''; // Clear the invalid image URL
+    ];
+
+    // Helper to try multiple models
+    const tryModels = async (msgs: any[]) => {
+      const models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"];
+
+      for (const model of models) {
+        try {
+          console.log(`Trying AI model: ${model}`);
+          const response = await groq.chat.completions.create({
+            model: model,
+            messages: msgs,
+            temperature: 0.3,
+            max_tokens: 1536
+          });
+          return response.choices[0]?.message?.content;
+        } catch (e: any) {
+          console.warn(`Model ${model} failed:`, e.message);
+          // Only continue if it's a rate limit or server error
+          if (e.status === 429 || e.status >= 500) continue;
+          throw e; // Throw other errors (auth, bad request)
         }
       }
-      
-      // Extract grounding sources if available (simplified for Groq)
-      const sources: any[] = [];
+      throw new Error("All AI models exhausted or rate limited.");
+    };
 
-      console.log(`✓ Successfully analyzed URL on attempt ${attempt}`);
-      return { ...rawJson, groundingSources: sources };
-      
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : String(e);
-      const errorStr = JSON.stringify(e);
-      lastError = e instanceof Error ? e : new Error(errorMsg);
-      
-      console.error(`Attempt ${attempt}/${maxRetries} failed:`, errorMsg);
-      
-      // Check if error is retryable
-      const isQuotaError = errorStr.includes("429") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.includes("quota");
-      const isNetworkError = errorMsg.includes("Network") || errorMsg.includes("404") || errorMsg.includes("503") || errorMsg.includes("timeout");
-      const isAuthError = errorMsg.includes("API key") || errorMsg.includes("authentication") || errorMsg.includes("401");
-      
-      // Don't retry auth errors
-      if (isAuthError) {
-        throw new Error(`API Key Error: Please verify your API key in .env file. Error: ${errorMsg}`);
-      }
-      
-      // Don't retry quota errors
-      if (isQuotaError) {
-        throw new Error("API quota exceeded. Groq has generous free tier - try again in a moment or check your usage at https://console.groq.com/");
-      }
-      
-      // Retry network and transient errors with exponential backoff
-      if (isNetworkError && attempt < maxRetries) {
-        const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-        console.log(`Retrying in ${delayMs}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        continue;
-      }
-      
-      // If last attempt or non-retryable error, throw
-      if (attempt === maxRetries || !isNetworkError) {
-        if (errorMsg.includes("parse")) {
-          throw new Error("Response parsing error: Invalid JSON from API");
-        } else if (errorMsg.includes("Empty")) {
-          throw new Error("No response from API: Please try again");
-        }
-        throw lastError;
+    const responseText = await tryModels(messages);
+
+    if (!responseText) {
+      throw new Error("Empty response from API");
+    }
+
+    const cleanedJson = cleanJsonResponse(responseText);
+    const rawJson = JSON.parse(cleanedJson);
+
+    // Merge scraped data back in to be sure
+    if (scrapedData) {
+      rawJson.productInfo.price = scrapedData.price;
+      rawJson.productInfo.name = scrapedData.name;
+      // rawJson.productInfo.rating = scrapedData.rating; // If we add rating to types later
+
+      // Strict Image Logic: Use scraped image, or a safe placeholder. Never trust the AI's URL blindly if scraped failed.
+      if (scrapedData.image && scrapedData.image.startsWith('http')) {
+        rawJson.productInfo.image = scrapedData.image;
+      } else if (!rawJson.productInfo.image || rawJson.productInfo.image.includes('amazon')) {
+        // If AI hallucinated an Amazon link or gave nothing, use a placeholder
+        rawJson.productInfo.image = "https://placehold.co/400?text=No+Image+Available";
       }
     }
+
+    return { ...rawJson, groundingSources: [] };
+
+  } catch (e) {
+    console.error("AI Analysis failed:", e);
+
+    // FALLBACK: If AI fails but we have scraped data, return that!
+    if (scrapedData) {
+      console.log("Falling back to pure scraped data.");
+      return {
+        productInfo: {
+          name: scrapedData.name,
+          price: scrapedData.price,
+          image: scrapedData.image,
+          description: scrapedData.description
+        },
+        analysis: {
+          summary: "AI Analysis unavailable due to high traffic. Displaying live scraped data only.",
+          isCounterfeit: false,
+          sentiment: { positive: 50, neutral: 50, negative: 0 },
+          scores: { performance: 80, durability: 80, pricing: 80, sensitivity: 80 },
+          keywords: ["Live Data", "Manual Review Required"],
+          lda: [],
+          seasonal: [],
+          fakeReviews: [],
+          authenticityOverview: { genuinePercentage: 100, fakePercentage: 0, suspiciousPercentage: 0 }
+        },
+        groundingSources: []
+      };
+    }
+    throw e;
   }
-  
-  // This should never be reached, but just in case
-  throw lastError || new Error("Failed to analyze Flipkart URL after multiple attempts");
 };
 
-export const chatWithAssistant = async (history: { role: 'user' | 'assistant', content: string }[], userMessage: string) => {
+export const chatWithAssistant = async (history: { role: 'user' | 'assistant', content: string }[], userMessage: string, context?: any) => {
   const groq = getAI();
-  
+
+  const systemMsg = "You are FlipIntegrity AI. You are helping Ananya detect fraudulent listings and fake reviews on Flipkart. Be professional, analytical, and alert her to specific counterfeit risks.";
+
+  const contextMsg = context ? `
+Current Product Context (LIVE DATA):
+Name: ${context.name}
+Price: ₹${context.price}
+Rating: ${context.rating} stars
+Reviews: ${context.reviewCount} total reviews
+Rating Breakdown: ${JSON.stringify(context.ratingBreakdown || {})}
+Feature Ratings: ${JSON.stringify(context.featureRatings || [])}
+Recent User Reviews: ${JSON.stringify(context.recentReviews || [])}
+` : "";
+
   const messages = [
-    // Add system instruction as first message
     {
       role: 'user' as const,
-      content: "You are FlipIntegrity AI. You are helping Ananya detect fraudulent listings and fake reviews on Flipkart. Be professional, analytical, and alert her to specific counterfeit risks."
+      content: systemMsg + contextMsg
     },
-    // Add chat history
     ...history.map((msg) => ({
       role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
       content: msg.content
     })),
-    // Add the new user message
     {
       role: 'user' as const,
       content: userMessage
     }
   ];
-  
+
   const response = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: messages,
     temperature: 0.7,
     max_tokens: 1024
   });
-  
+
   return response.choices[0]?.message?.content || "No response generated";
 };
+

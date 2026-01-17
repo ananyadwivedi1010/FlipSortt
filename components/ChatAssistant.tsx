@@ -1,8 +1,14 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { chatWithAssistant } from '../services/geminiService.ts';
+import { Product } from '../types.ts';
 
-const ChatAssistant: React.FC = () => {
+interface Props {
+  product?: Product;
+}
+
+const ChatAssistant: React.FC<Props> = ({ product }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([
     { role: 'assistant', content: 'Hello! I am your FlipIntegrity AI assistant. How can I help you verify products or detect fake reviews today?' }
@@ -30,7 +36,11 @@ const ChatAssistant: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await chatWithAssistant(messages.map(m => ({ role: m.role, content: m.content })), userMsg);
+      const response = await chatWithAssistant(
+        messages.map(m => ({ role: m.role, content: m.content })),
+        userMsg,
+        product // Pass the current product context!
+      );
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     } catch (error) {
       console.error(error);
@@ -39,6 +49,7 @@ const ChatAssistant: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="fixed bottom-6 right-6 z-[100]">
@@ -84,15 +95,15 @@ const ChatAssistant: React.FC = () => {
           </div>
 
           <div className="p-3 border-t bg-white flex items-center">
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Type your query..."
               className="flex-grow text-sm outline-none bg-gray-100 rounded-full px-4 py-2 focus:ring-1 focus:ring-blue-300"
             />
-            <button 
+            <button
               onClick={handleSend}
               className="ml-2 text-[#2874f0] hover:scale-110 transition p-1"
             >
@@ -101,7 +112,7 @@ const ChatAssistant: React.FC = () => {
           </div>
         </div>
       ) : (
-        <button 
+        <button
           onClick={() => setIsOpen(true)}
           className="bg-[#2874f0] text-white p-4 rounded-full shadow-xl hover:scale-110 transition transform hover:rotate-3 flex items-center justify-center relative"
         >

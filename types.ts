@@ -62,4 +62,4 @@ export interface Product {
   reviews: Review[];
 }
 
-export type AppView = 'Home' | 'Dashboard' | 'Analysis';
+export type AppView = 'Home' | 'Dashboard' | 'Analysis' | 'Login' | 'Signup';
