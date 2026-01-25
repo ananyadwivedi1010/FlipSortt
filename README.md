@@ -2,6 +2,8 @@
 
 **FlipSort** is an advanced AI-powered product analysis and integrity enforcement tool designed specifically for the Flipkart ecosystem. It helps users and brands detect fake reviews, identify counterfeit products, and analyze sentiment using state-of-the-art AI models.
 
+
+
 ## 🌟 Features
 
 *   **Real-time Scraper**: Fetches live product data (pricing, ratings, reviews, specifications) from Flipkart URLs.
@@ -94,9 +96,3 @@ npm run dev
 ```
 *   The app will open at `http://localhost:5173` (or similar).
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
-*Created by the FlipSort Team*
